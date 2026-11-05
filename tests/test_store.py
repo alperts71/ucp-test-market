@@ -2,6 +2,7 @@
 SDK models (ucp-sdk, generated from the 2026-08-25 schemas)."""
 
 import dataclasses
+import json
 import time
 
 import pytest
@@ -14,6 +15,7 @@ from ucp_sdk.models.schemas.shopping.fulfillment import Checkout
 from ucp_sdk.models.schemas.shopping.order import Order
 
 from app.config import load_settings
+from app.db import PRODUCTS_FILE as PRODUCTS
 from app.main import create_app
 
 AGENT = {"UCP-Agent": 'profile="https://agent.example/profile"'}
@@ -56,7 +58,7 @@ def checkout_ok(resp, status_code=200):
   return data
 
 
-def ready_checkout(client, sku="sku_001", qty=1):
+def ready_checkout(client, sku="sku_00002", qty=1):
   data = checkout_ok(
     client.post(
       "/checkout-sessions",
@@ -102,28 +104,35 @@ def test_discovery_profile(client):
   assert profile is not None
 
 
-def test_catalog_has_electronics_between_10_and_1000_dollars(client):
-  resp = client.post("/catalog/search", headers=AGENT, json={"pagination": {"limit": 50}})
-  data = resp.json()
+def test_catalog_has_500_supermarket_products(client):
+  data = client.post("/catalog/search", headers=AGENT, json={"pagination": {"limit": 50}}).json()
   SearchResponse.model_validate(data)
-  assert data["pagination"]["total_count"] == 20
-  for product in data["products"]:
-    assert 1000 <= product["variants"][0]["price"]["amount"] <= 100000
+  assert data["pagination"]["total_count"] == 500
+  product = data["products"][0]
+  assert product["title"] == "Sütaş Whole Milk"
+  assert [v["options"][0]["label"] for v in product["variants"]] == ["500 ml", "1 L", "1.5 L"]
+  assert product["variants"][0]["price"]["currency"] == "TRY"
 
 
 def test_catalog_search_and_lookup(client):
-  data = client.post("/catalog/search", headers=AGENT, json={"query": "camera"}).json()
-  assert {p["title"] for p in data["products"]} >= {"Action Camera", "Mirrorless Camera Body"}
-  data = client.post("/catalog/lookup", headers=AGENT, json={"ids": ["sku_003", "nope"]}).json()
+  # Turkish accents are optional in search: "sut" finds "Sütaş" and "süt".
+  data = client.post("/catalog/search", headers=AGENT, json={"query": "sutas beyaz peynir"}).json()
+  assert data["products"] and all("Sütaş" in p["title"] for p in data["products"])
+  data = client.post("/catalog/search", headers=AGENT, json={"query": "süt", "filters": {"categories": ["milk"]}}).json()
+  assert data["pagination"]["total_count"] > 20
+  data = client.post("/catalog/lookup", headers=AGENT, json={"ids": ["sku_00002", "prod_0003", "nope"]}).json()
   LookupResponse.model_validate(data)
-  assert [p["id"] for p in data["products"]] == ["prod_003"]
+  assert [p["id"] for p in data["products"]] == ["prod_0001", "prod_0003"]
+  assert [v["id"] for v in data["products"][0]["variants"]] == ["sku_00002"]
+  assert data["products"][0]["variants"][0]["inputs"] == [{"id": "sku_00002", "match": "exact"}]
+  assert all(v["inputs"][0]["match"] == "featured" for v in data["products"][1]["variants"])
   assert data["messages"][0]["code"] == "not_found"
 
 
 def test_happy_path_creates_order(client):
   chk = ready_checkout(client, qty=2)
   totals = {t["type"]: t["amount"] for t in chk["totals"]}
-  assert totals["fulfillment"] == 999
+  assert totals["fulfillment"] == 4990
   done = checkout_ok(client.post(f"/checkout-sessions/{chk['id']}/complete", headers=AGENT, json=pay("success_token")))
   assert done["status"] == "completed"
   assert "continue_url" not in done
@@ -133,14 +142,13 @@ def test_happy_path_creates_order(client):
   assert order["checkout_id"] == chk["id"]
   assert order["line_items"][0]["quantity"]["total"] == 2
   # Stock went down by 2.
-  product = client.post("/catalog/lookup", headers=AGENT, json={"ids": ["sku_001"]}).json()
-  assert product["products"][0]["variants"][0]["availability"]["available"]
-  assert client.app.state.db.get_variant("sku_001")["inventory"] == 23
+  start = json.loads(PRODUCTS.read_text())[0]["variants"][1]["inventory"]
+  assert client.app.state.db.get_variant("sku_00002")["inventory"] == start - 2
 
 
 def test_create_reports_what_is_missing(client):
   data = checkout_ok(
-    client.post("/checkout-sessions", headers=AGENT, json={"line_items": [{"item": {"id": "sku_002"}, "quantity": 1}]}),
+    client.post("/checkout-sessions", headers=AGENT, json={"line_items": [{"item": {"id": "sku_00004"}, "quantity": 1}]}),
     201,
   )
   assert data["status"] == "incomplete"
@@ -153,7 +161,7 @@ def test_create_reports_what_is_missing(client):
 def test_update_selects_express_shipping(client):
   chk = ready_checkout(client)
   body = {
-    "line_items": [{"id": chk["line_items"][0]["id"], "item": {"id": "sku_001"}, "quantity": 1}],
+    "line_items": [{"id": chk["line_items"][0]["id"], "item": {"id": "sku_00002"}, "quantity": 1}],
     "buyer": {"email": "buyer@example.com"},
     "fulfillment": {
       "methods": [
@@ -168,7 +176,7 @@ def test_update_selects_express_shipping(client):
     },
   }
   data = checkout_ok(client.put(f"/checkout-sessions/{chk['id']}", headers=AGENT, json=body))
-  assert {t["type"]: t["amount"] for t in data["totals"]}["fulfillment"] == 2499
+  assert {t["type"]: t["amount"] for t in data["totals"]}["fulfillment"] == 9990
 
 
 def test_unknown_items_give_error_response(client):
@@ -183,7 +191,7 @@ def test_out_of_stock_item(client):
     client.post(
       "/checkout-sessions",
       headers=AGENT,
-      json={"line_items": [{"item": {"id": "sku_009"}, "quantity": 1}], "buyer": {"email": "a@b.co"}},
+      json={"line_items": [{"item": {"id": "sku_00041"}, "quantity": 1}], "buyer": {"email": "a@b.co"}},
     ),
     201,
   )
@@ -246,7 +254,7 @@ def test_cancel(client):
 
 
 def test_idempotency(client):
-  body = {"line_items": [{"item": {"id": "sku_001"}, "quantity": 1}]}
+  body = {"line_items": [{"item": {"id": "sku_00002"}, "quantity": 1}]}
   headers = {**AGENT, "Idempotency-Key": "abc-123"}
   first = client.post("/checkout-sessions", headers=headers, json=body)
   second = client.post("/checkout-sessions", headers=headers, json=body)
