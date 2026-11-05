@@ -1,7 +1,7 @@
 # UCP Test Market
 
 Yapay zekâ alışveriş asistanlarının (ajanların) **UCP** ile alışveriş yapabildiği küçük bir **test mağazası**.
-Gerçek ürün satılmaz, gerçek para çekilmez.
+Gerçek ürün satılmaz, gerçek para çekilmez. Listede geçen markalarla hiçbir bağı yoktur.
 
 > **UCP nedir?** "Universal Commerce Protocol". Bir yapay zekâ ajanının bir mağazayla
 > konuşması için ortak kurallar. Ajan önce mağazanın "tanıtım kartını" okur
@@ -13,7 +13,8 @@ Gerçek ürün satılmaz, gerçek para çekilmez.
 | Parça | Ne işe yarar |
 | --- | --- |
 | `app/` | Mağazanın kendisi (Python). |
-| `app/products.json` | 20 elektronik ürün, fiyatlar 10–1000 dolar arası rastgele. "Action Camera" bilerek **stokta yok** (stok bitti senaryosunu denemek için). |
+| `app/products.json` | 500 süpermarket ürünü (süt, peynir, yoğurt, kahvaltılık, ekmek, çay/kahve…), gerçek marka adlarıyla. Aynı ürünün farklı gramajları "seçenek" (variant) olarak durur; toplam 1049 seçenek. Fiyatlar TL, 2026 sonu market fiyatlarına yakın. 25 seçenek bilerek **stokta yok**. |
+| `scripts/generate_products.py` | `products.json` dosyasını üreten program. Ürün, marka veya fiyat değiştirmek için bunu düzenleyip çalıştır. |
 | `client/ucp_test_client.py` | Bağımsız test istemcisi: mağazayla bir ajan gibi konuşur, tüm senaryoları dener. |
 | `tests/` | Otomatik testler. Cevapları resmi UCP Python kütüphanesiyle (ucp-sdk) kontrol eder. |
 | `Dockerfile` | Google Cloud Run'a yüklemek için paket tarifi (henüz yüklenmedi). |
@@ -23,7 +24,8 @@ Gerçek ürün satılmaz, gerçek para çekilmez.
 - **Tanıtım kartı** (`GET /.well-known/ucp`): mağazanın neler yapabildiğini anlatır.
 - **Ürün arama** (`POST /catalog/search`) ve **ürün bulma** (`POST /catalog/lookup`, `POST /catalog/product`).
 - **Ödeme oturumu** (checkout): oluştur, güncelle, tamamla, iptal et (`/checkout-sessions/...`).
-- **Kargo**: Standart 9,99 $ veya Ekspres 24,99 $.
+- **Kargo**: Standart 49,90 TL veya Ekspres 99,90 TL.
+- **Arama** Türkçe harf olmadan da çalışır: "sut" yazınca "süt" ve "Sütaş" bulunur.
 - **Sipariş sorgulama** (`GET /orders/{id}`).
 - **Aynı isteğin iki kez işlenmemesi** (`Idempotency-Key` başlığı).
 - İnsanlar için basit sayfalar: ana sayfa (`/`), ödeme devam sayfası (`/continue/...`), sipariş sayfası (`/order-status/...`), API belgesi (`/docs`).
@@ -94,7 +96,7 @@ Otomatik testler: `pytest`
 - **İmzalı istekler** (RFC 9421): UCP'de isteğe bağlı. Şimdilik kontrol edilmiyor.
 - **MCP ve A2A bağlantı türleri**: sadece REST (normal web istekleri) var.
 - **Sepet (cart), indirim kodu, vergi, sipariş bildirimi (webhook)**: sonraki sürümlere.
-- **Kalıcı veritabanı**: Cloud Run'da SQLite dosyası sunucu yeniden başlayınca silinir.
+- **Kalıcı veritabanı**: Sunucu her başladığında stok ilk haline döner. Cloud Run'da siparişler de silinir.
   Test için sorun değil; kalıcı olsun istenirse ileride Cloud SQL veya Firestore'a geçilebilir.
 
 ## Cloud Run notu (henüz yüklenmedi)

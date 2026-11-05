@@ -15,13 +15,13 @@ from . import payments
 from .db import Database
 from .profile import FULFILLMENT
 
-CURRENCY = "USD"
+CURRENCY = "TRY"
 SESSION_TTL = dt.timedelta(hours=6)
 TERMINAL = ("completed", "canceled")
 
 SHIPPING_OPTIONS = [
-  ("standard", "Standard Shipping", "Arrives in 5-7 business days", 999),
-  ("express", "Express Shipping", "Arrives in 1-2 business days", 2499),
+  ("standard", "Standard Shipping", "Arrives in 2-3 business days", 4990),
+  ("express", "Express Shipping", "Arrives tomorrow", 9990),
 ]
 ADDRESS_REQUIRED = ("street_address", "address_locality", "postal_code", "address_country")
 ADDRESS_FIELDS = (

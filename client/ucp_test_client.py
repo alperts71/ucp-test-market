@@ -22,10 +22,10 @@ AGENT_PROFILE = "https://ucp-test-client.example/profile"
 ADDRESS = {
   "full_name": "Test Buyer",
   "street_address": "1 Main St",
-  "address_locality": "Austin",
-  "address_region": "TX",
-  "postal_code": "78701",
-  "address_country": "US",
+  "address_locality": "Kadikoy",
+  "address_region": "Istanbul",
+  "postal_code": "34710",
+  "address_country": "TR",
 }
 SCENARIOS = {
   "happy": ("success_token", "completed"),
@@ -89,8 +89,8 @@ def check_checkout(c: dict):
   expect("payment_handlers" in c["ucp"], "checkout ucp block must list payment_handlers")
 
 
-def money(cents: int) -> str:
-  return f"${cents / 100:,.2f}"
+def money(amount: int, currency: str = "TRY") -> str:
+  return f"{amount / 100:,.2f} {currency}"
 
 
 def discover(client: Client) -> dict:
@@ -110,11 +110,16 @@ def discover(client: Client) -> dict:
 
 
 def find_product(client: Client) -> dict:
-  status, result = client.call("POST", "/catalog/search", {"query": "headphones"})
+  status, result = client.call("POST", "/catalog/search", {"query": "beyaz peynir"})
   expect(status == 200 and result.get("products"), "catalog search returned no products")
-  product = result["products"][0]
-  variant = product["variants"][0]
-  print(f"  ✓ Search 'headphones' → {product['title']} ({money(variant['price']['amount'])}), item id {variant['id']}")
+  in_stock = [v for p in result["products"] for v in p["variants"] if v["availability"]["available"]]
+  expect(in_stock, "no product in the search results is in stock")
+  variant = in_stock[0]
+  price = variant["price"]
+  print(
+    f"  ✓ Search 'beyaz peynir' → {variant['title']}"
+    f" ({money(price['amount'], price['currency'])}), item id {variant['id']}"
+  )
   return variant
 
 
@@ -139,7 +144,7 @@ def run_scenario(client: Client, name: str, variant: dict) -> None:
   check_checkout(chk)
   expect(chk["status"] == "ready_for_complete", f"expected ready_for_complete, got {chk['status']}: {chk.get('messages')}")
   total = next(t["amount"] for t in chk["totals"] if t["type"] == "total")
-  print(f"  ✓ Email and address added. Status {chk['status']}, total {money(total)}")
+  print(f"  ✓ Email and address added. Status {chk['status']}, total {money(total, chk['currency'])}")
 
   payment = {
     "payment": {

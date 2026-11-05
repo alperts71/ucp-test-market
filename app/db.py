@@ -1,6 +1,7 @@
 """SQLite storage.
 
-Products are seeded from products.json on first start. Checkout sessions and
+Products and their size variants are seeded from products.json on every
+start, so stock always begins at its original level. Checkout sessions and
 orders are stored as JSON documents, which keeps the code short and makes the
 database easy to inspect with any SQLite viewer.
 """
@@ -17,11 +18,17 @@ PRODUCTS_FILE = Path(__file__).with_name("products.json")
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS products (
   id TEXT PRIMARY KEY,
-  variant_id TEXT UNIQUE NOT NULL,
-  handle TEXT NOT NULL,
+  handle TEXT UNIQUE NOT NULL,
+  brand TEXT NOT NULL,
   title TEXT NOT NULL,
   description TEXT NOT NULL,
-  category TEXT NOT NULL,
+  category TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS variants (
+  id TEXT PRIMARY KEY,
+  product_id TEXT NOT NULL REFERENCES products(id),
+  position INTEGER NOT NULL,
+  size TEXT NOT NULL,
   price INTEGER NOT NULL,
   inventory INTEGER NOT NULL
 );
@@ -60,10 +67,12 @@ class Database:
     # One writer at a time keeps checkout updates consistent.
     self.lock = threading.RLock()
     with self.lock:
+      cols = [r[1] for r in self._conn.execute("PRAGMA table_info(products)")]
+      if cols and "brand" not in cols:  # database from the electronics version
+        self._conn.executescript("DROP TABLE products;")
       self._conn.executescript(_SCHEMA)
       self._conn.commit()
-    if self.count_products() == 0:
-      self.seed_products()
+    self.seed_products()
 
   # Products ---------------------------------------------------------------
 
@@ -72,37 +81,73 @@ class Database:
       return self._conn.execute("SELECT COUNT(*) FROM products").fetchone()[0]
 
   def seed_products(self) -> None:
-    rows = json.loads(PRODUCTS_FILE.read_text())
+    products = json.loads(PRODUCTS_FILE.read_text())
     with self.lock:
+      self._conn.execute("DELETE FROM variants")
       self._conn.execute("DELETE FROM products")
-      self._conn.executemany(
-        "INSERT INTO products VALUES (:id, :variant_id, :handle, :title,"
-        " :description, :category, :price, :inventory)",
-        rows,
-      )
+      for p in products:
+        self._conn.execute(
+          "INSERT INTO products VALUES (?, ?, ?, ?, ?, ?)",
+          (p["id"], p["handle"], p["brand"], p["title"], p["description"], p["category"]),
+        )
+        for pos, v in enumerate(p["variants"]):
+          self._conn.execute(
+            "INSERT INTO variants VALUES (?, ?, ?, ?, ?, ?)",
+            (v["id"], p["id"], pos, v["size"], v["price"], v["inventory"]),
+          )
       self._conn.commit()
 
+  def _variants_for(self, product_ids: list[str]) -> dict[str, list[dict[str, Any]]]:
+    out: dict[str, list[dict[str, Any]]] = {pid: [] for pid in product_ids}
+    if not product_ids:
+      return out
+    marks = ",".join("?" * len(product_ids))
+    rows = self._conn.execute(
+      f"SELECT * FROM variants WHERE product_id IN ({marks})"  # noqa: S608
+      " ORDER BY product_id, position",
+      product_ids,
+    ).fetchall()
+    for r in rows:
+      out[r["product_id"]].append(dict(r))
+    return out
+
   def list_products(self) -> list[dict[str, Any]]:
+    """All products, each with a "variants" list."""
     with self.lock:
-      rows = self._conn.execute("SELECT * FROM products ORDER BY id").fetchall()
-    return [dict(r) for r in rows]
+      rows = [dict(r) for r in self._conn.execute("SELECT * FROM products ORDER BY id")]
+      variants = self._variants_for([r["id"] for r in rows])
+    for r in rows:
+      r["variants"] = variants[r["id"]]
+    return rows
 
   def get_product(self, any_id: str) -> dict[str, Any] | None:
-    """Find a product by product id, variant id or handle."""
+    """Find a product by product id, handle or one of its variant ids."""
     with self.lock:
       row = self._conn.execute(
-        "SELECT * FROM products WHERE id = ? OR variant_id = ? OR handle = ?",
+        "SELECT * FROM products WHERE id = ? OR handle = ?"
+        " OR id = (SELECT product_id FROM variants WHERE id = ?)",
         (any_id, any_id, any_id),
       ).fetchone()
-    return dict(row) if row else None
+      if row is None:
+        return None
+      product = dict(row)
+      product["variants"] = self._variants_for([product["id"]])[product["id"]]
+    return product
 
   def get_variant(self, variant_id: str) -> dict[str, Any] | None:
     """Checkout line items refer to the variant id (the SKU)."""
     with self.lock:
       row = self._conn.execute(
-        "SELECT * FROM products WHERE variant_id = ?", (variant_id,)
+        "SELECT v.id AS variant_id, v.size, v.price, v.inventory, p.id AS product_id,"
+        " p.title AS product_title, p.brand, p.handle"
+        " FROM variants v JOIN products p ON p.id = v.product_id WHERE v.id = ?",
+        (variant_id,),
       ).fetchone()
-    return dict(row) if row else None
+    if row is None:
+      return None
+    variant = dict(row)
+    variant["title"] = f"{variant['product_title']} {variant['size']}"
+    return variant
 
   def reserve_inventory(self, quantities: dict[str, int]) -> list[str]:
     """Take stock for an order. Returns variant ids that ran out (no change)."""
@@ -110,7 +155,7 @@ class Database:
       short = []
       for variant_id, qty in quantities.items():
         row = self._conn.execute(
-          "SELECT inventory FROM products WHERE variant_id = ?", (variant_id,)
+          "SELECT inventory FROM variants WHERE id = ?", (variant_id,)
         ).fetchone()
         if row is None or row[0] < qty:
           short.append(variant_id)
@@ -118,8 +163,7 @@ class Database:
         return short
       for variant_id, qty in quantities.items():
         self._conn.execute(
-          "UPDATE products SET inventory = inventory - ? WHERE variant_id = ?",
-          (qty, variant_id),
+          "UPDATE variants SET inventory = inventory - ? WHERE id = ?", (qty, variant_id)
         )
       self._conn.commit()
       return []

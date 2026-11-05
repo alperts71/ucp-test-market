@@ -244,15 +244,18 @@ def create_app(settings=None) -> FastAPI:
   @app.get("/", response_class=HTMLResponse)
   def home(request: Request):
     rows = "".join(
-      f"<tr><td>{html.escape(p['variant_id'])}</td><td>{html.escape(p['title'])}</td>"
-      f"<td>${p['price'] / 100:,.2f}</td><td>{p['inventory']}</td></tr>"
+      f"<tr><td><a href='/products/{html.escape(p['handle'])}'>{html.escape(p['title'])}</a></td>"
+      f"<td>{html.escape(p['category'])}</td><td>"
+      + ", ".join(f"{html.escape(v['size'])} {_tl(v['price'])}" for v in p["variants"])
+      + "</td></tr>"
       for p in db.list_products()
     )
     body = (
       f"<p>This is a <b>test store</b> that speaks UCP version {UCP_VERSION}. "
-      f"No real orders or payments. Discovery profile: "
-      f"<a href='/.well-known/ucp'>/.well-known/ucp</a> · API docs: <a href='/docs'>/docs</a></p>"
-      f"<table><tr><th>Item id</th><th>Product</th><th>Price</th><th>Stock</th></tr>{rows}</table>"
+      "Nothing is sold, shipped or charged, and the store is not affiliated with the brands listed. "
+      "Discovery profile: <a href='/.well-known/ucp'>/.well-known/ucp</a> · "
+      "API docs: <a href='/docs'>/docs</a></p>"
+      f"<table><tr><th>Product</th><th>Category</th><th>Sizes and prices</th></tr>{rows}</table>"
     )
     return _page(settings.store_name, body)
 
@@ -261,10 +264,15 @@ def create_app(settings=None) -> FastAPI:
     p = db.get_product(handle)
     if p is None:
       return HTMLResponse(_page("Not found", "<p>Product not found.</p>"), status_code=404)
+    rows = "".join(
+      f"<tr><td>{html.escape(v['size'])}</td><td>{_tl(v['price'])}</td>"
+      f"<td><code>{html.escape(v['id'])}</code></td><td>{v['inventory']}</td></tr>"
+      for v in p["variants"]
+    )
     return _page(
       p["title"],
-      f"<p>{html.escape(p['description'])}</p><p><b>${p['price'] / 100:,.2f}</b> · "
-      f"item id <code>{html.escape(p['variant_id'])}</code> · stock {p['inventory']}</p>",
+      f"<p>{html.escape(p['description'])}</p><table><tr><th>Size</th><th>Price</th>"
+      f"<th>Item id</th><th>Stock</th></tr>{rows}</table>",
     )
 
   @app.get("/continue/{checkout_id}", response_class=HTMLResponse)
@@ -285,7 +293,7 @@ def create_app(settings=None) -> FastAPI:
       )
     return _page(
       "Your checkout",
-      f"<p>Status: <b>{view['status']}</b></p><ul>{items}</ul><p>Total: ${total / 100:,.2f}</p>"
+      f"<p>Status: <b>{view['status']}</b></p><ul>{items}</ul><p>Total: {_tl(total)}</p>"
       f"{'<p>Notes:</p><ul>' + msgs + '</ul>' if msgs else ''}{action}",
     )
 
@@ -304,7 +312,7 @@ def create_app(settings=None) -> FastAPI:
     )
     total = next(t["amount"] for t in order["totals"] if t["type"] == "total")
     return _page(
-      order["label"], f"<p>Status: processing (test order)</p><ul>{items}</ul><p>Total: ${total / 100:,.2f}</p>"
+      order["label"], f"<p>Status: processing (test order)</p><ul>{items}</ul><p>Total: {_tl(total)}</p>"
     )
 
   @app.get("/terms", response_class=HTMLResponse)
@@ -334,6 +342,12 @@ def create_app(settings=None) -> FastAPI:
 
 _ROOTS = RESPONSE_ROOTS
 _ALL = set(BUSINESS_CAPABILITIES)
+
+
+def _tl(kurus: int) -> str:
+  """Format an amount in kuruş as Turkish lira, e.g. 1234.50 -> '1.234,50 TL'."""
+  text = f"{kurus / 100:,.2f}".replace(",", " ").replace(".", ",").replace(" ", ".")
+  return f"{text} TL"
 
 
 def _page(title: str, body: str) -> HTMLResponse:
