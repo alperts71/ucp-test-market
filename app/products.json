@@ -1,0 +1,202 @@
+[
+  {
+    "id": "prod_001",
+    "variant_id": "sku_001",
+    "handle": "usb-c-charging-cable-2m",
+    "title": "USB-C Charging Cable 2m",
+    "price": 14199,
+    "category": "accessories",
+    "description": "Braided USB-C to USB-C cable, 100W fast charging, 2 meters.",
+    "inventory": 25
+  },
+  {
+    "id": "prod_002",
+    "variant_id": "sku_002",
+    "handle": "wireless-mouse",
+    "title": "Wireless Mouse",
+    "price": 82999,
+    "category": "accessories",
+    "description": "Ergonomic wireless mouse with silent clicks and USB receiver.",
+    "inventory": 25
+  },
+  {
+    "id": "prod_003",
+    "variant_id": "sku_003",
+    "handle": "mechanical-keyboard",
+    "title": "Mechanical Keyboard",
+    "price": 70799,
+    "category": "computers",
+    "description": "Full-size mechanical keyboard with hot-swappable switches.",
+    "inventory": 25
+  },
+  {
+    "id": "prod_004",
+    "variant_id": "sku_004",
+    "handle": "bluetooth-earbuds",
+    "title": "Bluetooth Earbuds",
+    "price": 81799,
+    "category": "audio",
+    "description": "True wireless earbuds with charging case, 24h battery.",
+    "inventory": 25
+  },
+  {
+    "id": "prod_005",
+    "variant_id": "sku_005",
+    "handle": "noise-cancelling-headphones",
+    "title": "Noise-Cancelling Headphones",
+    "price": 16499,
+    "category": "audio",
+    "description": "Over-ear headphones with active noise cancellation.",
+    "inventory": 25
+  },
+  {
+    "id": "prod_006",
+    "variant_id": "sku_006",
+    "handle": "27-inch-4k-monitor",
+    "title": "27-inch 4K Monitor",
+    "price": 87399,
+    "category": "computers",
+    "description": "27-inch IPS 4K UHD monitor with USB-C input.",
+    "inventory": 25
+  },
+  {
+    "id": "prod_007",
+    "variant_id": "sku_007",
+    "handle": "portable-ssd-1tb",
+    "title": "Portable SSD 1TB",
+    "price": 62999,
+    "category": "storage",
+    "description": "Pocket-size 1TB solid state drive, USB 3.2.",
+    "inventory": 25
+  },
+  {
+    "id": "prod_008",
+    "variant_id": "sku_008",
+    "handle": "smartwatch",
+    "title": "Smartwatch",
+    "price": 11099,
+    "category": "wearables",
+    "description": "Fitness smartwatch with heart-rate and GPS.",
+    "inventory": 25
+  },
+  {
+    "id": "prod_009",
+    "variant_id": "sku_009",
+    "handle": "action-camera",
+    "title": "Action Camera",
+    "price": 43099,
+    "category": "cameras",
+    "description": "Waterproof 4K action camera with stabilization.",
+    "inventory": 0
+  },
+  {
+    "id": "prod_010",
+    "variant_id": "sku_010",
+    "handle": "wi-fi-6-router",
+    "title": "Wi-Fi 6 Router",
+    "price": 63999,
+    "category": "networking",
+    "description": "Dual-band Wi-Fi 6 router for homes up to 200 m2.",
+    "inventory": 25
+  },
+  {
+    "id": "prod_011",
+    "variant_id": "sku_011",
+    "handle": "smart-speaker",
+    "title": "Smart Speaker",
+    "price": 65899,
+    "category": "audio",
+    "description": "Voice-assistant smart speaker with room-filling sound.",
+    "inventory": 25
+  },
+  {
+    "id": "prod_012",
+    "variant_id": "sku_012",
+    "handle": "10-inch-tablet",
+    "title": "10-inch Tablet",
+    "price": 18399,
+    "category": "computers",
+    "description": "10-inch tablet, 64GB storage, all-day battery.",
+    "inventory": 25
+  },
+  {
+    "id": "prod_013",
+    "variant_id": "sku_013",
+    "handle": "gaming-controller",
+    "title": "Gaming Controller",
+    "price": 44399,
+    "category": "gaming",
+    "description": "Wireless gaming controller for PC and consoles.",
+    "inventory": 25
+  },
+  {
+    "id": "prod_014",
+    "variant_id": "sku_014",
+    "handle": "webcam-1080p",
+    "title": "Webcam 1080p",
+    "price": 89899,
+    "category": "accessories",
+    "description": "Full HD webcam with dual microphones.",
+    "inventory": 25
+  },
+  {
+    "id": "prod_015",
+    "variant_id": "sku_015",
+    "handle": "power-bank-20000mah",
+    "title": "Power Bank 20000mAh",
+    "price": 31499,
+    "category": "accessories",
+    "description": "20000mAh power bank with two USB-C ports.",
+    "inventory": 25
+  },
+  {
+    "id": "prod_016",
+    "variant_id": "sku_016",
+    "handle": "e-reader",
+    "title": "E-Reader",
+    "price": 18499,
+    "category": "computers",
+    "description": "6-inch glare-free e-ink reader with backlight.",
+    "inventory": 25
+  },
+  {
+    "id": "prod_017",
+    "variant_id": "sku_017",
+    "handle": "drone-with-4k-camera",
+    "title": "Drone with 4K Camera",
+    "price": 97599,
+    "category": "cameras",
+    "description": "Foldable drone with 4K camera and 30 min flight time.",
+    "inventory": 25
+  },
+  {
+    "id": "prod_018",
+    "variant_id": "sku_018",
+    "handle": "mirrorless-camera-body",
+    "title": "Mirrorless Camera Body",
+    "price": 68899,
+    "category": "cameras",
+    "description": "24MP mirrorless camera body, interchangeable lenses.",
+    "inventory": 25
+  },
+  {
+    "id": "prod_019",
+    "variant_id": "sku_019",
+    "handle": "smart-home-plug-2-pack",
+    "title": "Smart Home Plug (2-pack)",
+    "price": 77799,
+    "category": "smart-home",
+    "description": "Wi-Fi smart plugs with energy monitoring, 2 pieces.",
+    "inventory": 25
+  },
+  {
+    "id": "prod_020",
+    "variant_id": "sku_020",
+    "handle": "laptop-stand",
+    "title": "Laptop Stand",
+    "price": 77599,
+    "category": "accessories",
+    "description": "Adjustable aluminium laptop stand.",
+    "inventory": 25
+  }
+]
